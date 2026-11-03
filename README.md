@@ -107,3 +107,23 @@ Verificare completă cu modelele reale (Ollama pornit, corpus temporar):
 ```
 
 Documentație API: [Ollama embeddings](https://docs.ollama.com/api/embed), [Ollama chat](https://docs.ollama.com/api/chat), [Boto3 upload](https://docs.aws.amazon.com/boto3/latest/guide/s3-uploading-files.html).
+
+## Import din docs/
+
+Pune PDF, Markdown sau TXT in `docs/`, inclusiv subfoldere. Lista fara indexare sau conexiuni Ollama:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.import_docs --dry-run
+```
+
+Pentru import, porneste Ollama si opreste temporar serverul web pentru a evita importuri concurente intre procese:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.import_docs
+```
+
+Alt director: `--path "C:/cale/documente"`. Limitele din `.env` se aplica si aici. Comanda afiseaza progresul, continua dupa erori si returneaza codul 1 daca un fisier esueaza. Fisierele ascunse, directoarele ascunse, linkurile simbolice si junction-urile din arbore sunt omise.
+
+Duplicatele sunt omise dupa SHA-256. Fisierele modificate sunt documente noi; versiunea veche nu este stearsa automat. Sterge-o explicit din interfata daca nu mai trebuie folosita. Numele sursei este numele fisierului; foloseste nume distinctive pentru documente diferite cu acelasi nume din subfoldere. Nu exista monitorizare automata a folderului.
+
+Originalele raman in `docs/`, excluse din Git. Dupa import reporneste serverul si reincarca pagina.
