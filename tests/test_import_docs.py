@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from scripts.import_docs import import_directory
+from cli.import_docs import import_directory
 
 class FakeStore:
     settings = SimpleNamespace(max_upload_mb=1)

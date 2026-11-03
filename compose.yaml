@@ -12,7 +12,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_BACKEND: postgres
-      DATABASE_URL: postgresql://opsatlas:${OPSATLAS_DB_PASSWORD:?Run scripts.configure_postgres first}@postgres:5432/opsatlas
+      DATABASE_URL: postgresql://opsatlas:${OPSATLAS_DB_PASSWORD:?Run cli.configure_postgres first}@postgres:5432/opsatlas
       OLLAMA_URL: ${CONTAINER_OLLAMA_URL:-http://host.containers.internal:11434}
       CHAT_MODEL: ${CHAT_MODEL:-qwen3:14b}
       EMBED_MODEL: ${EMBED_MODEL:-embeddinggemma:300m}
@@ -47,8 +47,8 @@ services:
     environment:
       POSTGRES_DB: opsatlas
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Run scripts.configure_postgres first}
-      OPSATLAS_DB_PASSWORD: ${OPSATLAS_DB_PASSWORD:?Run scripts.configure_postgres first}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Run cli.configure_postgres first}
+      OPSATLAS_DB_PASSWORD: ${OPSATLAS_DB_PASSWORD:?Run cli.configure_postgres first}
       POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"

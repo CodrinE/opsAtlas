@@ -6,12 +6,13 @@ Install/configure a Compose provider through Podman Desktop if podman compose is
 No Docker Desktop is required.
 
 From the project root:
+
 1. Stop the application and any document importer.
-2. Run: .venv/Scripts/python.exe -m scripts.configure_postgres
+2. Run: .venv/Scripts/python.exe -m cli.configure_postgres
 3. Run: podman compose up -d postgres
 4. Run: podman logs opsatlas-postgres
-5. Run: .venv/Scripts/python.exe -m scripts.check_postgres
-6. Optional migration: .venv/Scripts/python.exe -m scripts.migrate_postgres
+5. Run: .venv/Scripts/python.exe -m cli.check_postgres
+6. Optional migration: .venv/Scripts/python.exe -m cli.migrate_postgres
 7. Start the application normally.
 
 configure_postgres generates separate random administrator and application passwords in the ignored .env.
@@ -42,10 +43,10 @@ Do not change the PostgreSQL major version on an existing volume without a plann
 
 Stop application/importers before a restore.
 Backup data to an ignored local file:
-.venv/Scripts/python.exe -m scripts.postgres_backup backup
+.venv/Scripts/python.exe -m cli.postgres_backup backup
 
 Restore a trusted dump into an EMPTY initialized PostgreSQL database:
-.venv/Scripts/python.exe -m scripts.postgres_backup restore --file backups/NAME.dump
+.venv/Scripts/python.exe -m cli.postgres_backup restore --file backups/NAME.dump
 
 These are data-only custom pg_dump archives for this version of the initialized schema.
 They do not contain role definitions, passwords, models or original PDFs.
@@ -87,7 +88,7 @@ To reinstall the optional Compose tooling:
 .venv/Scripts/python.exe -m pip install -r requirements-containers.txt
 
 PostgreSQL can need a few seconds after container start/restart before accepting connections.
-Check status with podman ps, then scripts.check_postgres.
+Check status with podman ps, then cli.check_postgres.
 
 ## Run the complete application with Podman Compose
 
@@ -115,7 +116,7 @@ Commands:
 - podman compose logs -f app
 - podman compose stop
 - podman compose up -d
-- podman compose exec app python -m scripts.import_docs
+- podman compose exec app python -m cli.import_docs
 
 Do not run a CLI import and a web upload simultaneously.
 docs/ is mounted read-only; new documents do not require an image rebuild.
@@ -129,3 +130,42 @@ The healthcheck verifies app and database availability, independently of Ollama'
 
 Verified locally: both containers healthy, five existing documents visible, Ollama ready,
 and an HTTP chat request returning sources and valid citation identifiers.
+
+## Start and stop the complete stack
+
+After the one-time configuration above, prefer the project wrappers; they discover Podman
+and set the Compose provider automatically. Start builds the local application image and
+starts both services. Stop preserves containers and named volumes.
+
+**Windows Git Bash / Linux Bash**
+
+```bash
+bash scripts/start.sh
+bash scripts/stop.sh
+```
+
+**Windows PowerShell**
+
+```powershell
+.\scripts\start.ps1
+.\scripts\stop.ps1
+```
+
+Append `--check` to either wrapper to verify Compose tooling without changing containers.
+Open http://127.0.0.1:8080 after startup.
+
+## Python utility location
+
+Python utilities have moved from `scripts/` to `cli/`.
+Use `python -m cli.configure_postgres`, `python -m cli.check_postgres`,
+`python -m cli.migrate_postgres` and `python -m cli.postgres_backup`
+with the appropriate arguments. Replace `python` with your virtual environment interpreter.
+Only `.sh` and `.ps1` wrappers remain in `scripts/`.
+
+The Dockerfile copies `cli/` into the app image. Container imports therefore use:
+
+```bash
+podman compose exec app python -m cli.import_docs
+```
+
+See the [main README](../../README.md#start-and-stop-scripts) for platform-specific launch commands.

@@ -9,7 +9,7 @@ from app.config import Settings
 from app.postgres import PostgresStore
 from app.storage import create_store
 from app.rag import Store, RagError
-from scripts.migrate_postgres import migrate
+from cli.migrate_postgres import migrate
 
 
 def test_backend_settings_validation(tmp_path):

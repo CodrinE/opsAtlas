@@ -3,7 +3,7 @@
 !requirements.txt
 !app/
 !app/**
-!scripts/
-!scripts/**
+!cli/
+!cli/**
 **/__pycache__/
 **/*.pyc

@@ -21,7 +21,7 @@ python -m venv .venv
 Copy-Item .env.example .env
 ollama pull qwen3:14b
 ollama pull embeddinggemma:300m
-.\.venv\Scripts\python.exe -m scripts.configure_postgres
+.\.venv\Scripts\python.exe -m cli.configure_postgres
 ```
 
 </details>
@@ -35,14 +35,14 @@ python3 -m venv .venv
 cp -n .env.example .env
 ollama pull qwen3:14b
 ollama pull embeddinggemma:300m
-./.venv/bin/python -m scripts.configure_postgres
+./.venv/bin/python -m cli.configure_postgres
 ```
 
 </details>
 
 Do not overwrite an existing `.env`: it contains the database credentials and your model settings. You can use an installed chat model by setting `CHAT_MODEL` to its exact name from `ollama list`. The local checkout was tested with `qwen2.5:7b`.
 
-Build the application locally and start both containers:
+For automatic Podman and Compose discovery, use the [start and stop scripts](#start-and-stop-scripts). To configure the environment manually and build both services:
 
 <details>
 <summary><strong>Windows (PowerShell)</strong></summary>
@@ -155,7 +155,7 @@ Place PDF, Markdown or TXT files under `docs/`, including subdirectories. Previe
 **Windows / Linux**
 
 ```bash
-./.venv/bin/python -m scripts.import_docs --dry-run
+./.venv/bin/python -m cli.import_docs --dry-run
 ```
 
 Start Ollama and stop the directly running web server before a CLI import:
@@ -163,7 +163,7 @@ Start Ollama and stop the directly running web server before a CLI import:
 **Windows / Linux**
 
 ```bash
-./.venv/bin/python -m scripts.import_docs
+./.venv/bin/python -m cli.import_docs
 ```
 
 For the container deployment, with no concurrent web uploads:
@@ -171,7 +171,7 @@ For the container deployment, with no concurrent web uploads:
 **Windows / Linux**
 
 ```bash
-podman compose exec app python -m scripts.import_docs
+podman compose exec app python -m cli.import_docs
 ```
 
 The container mounts `docs/` read-only, so adding source documents does not require rebuilding the image.
@@ -184,12 +184,12 @@ Original files remain under `docs/` and are excluded from Git. Refresh the inter
 
 ## PostgreSQL migration and backups
 
-Generate credentials once with `scripts.configure_postgres`, start PostgreSQL, and check connectivity:
+Generate credentials once with `cli.configure_postgres`, start PostgreSQL, and check connectivity:
 
 **Windows / Linux**
 
 ```bash
-./.venv/bin/python -m scripts.check_postgres
+./.venv/bin/python -m cli.check_postgres
 ```
 
 Copy existing SQLite documents and embeddings without deleting the source:
@@ -197,7 +197,7 @@ Copy existing SQLite documents and embeddings without deleting the source:
 **Windows / Linux**
 
 ```bash
-./.venv/bin/python -m scripts.migrate_postgres
+./.venv/bin/python -m cli.migrate_postgres
 ```
 
 Run migration without concurrent imports. It commits per document and skips duplicates, so an interrupted migration can be rerun. Keep SQLite until you verify document counts and answers.
@@ -207,7 +207,7 @@ Create a local PostgreSQL backup:
 **Windows / Linux**
 
 ```bash
-./.venv/bin/python -m scripts.postgres_backup backup
+./.venv/bin/python -m cli.postgres_backup backup
 ```
 
 Restore a trusted backup into an empty initialized PostgreSQL database, with the application stopped:
@@ -215,7 +215,7 @@ Restore a trusted backup into an empty initialized PostgreSQL database, with the
 **Windows / Linux**
 
 ```bash
-./.venv/bin/python -m scripts.postgres_backup restore --file backups/NAME.dump
+./.venv/bin/python -m cli.postgres_backup restore --file backups/NAME.dump
 ```
 
 These are data-only archives for the supplied schema, not backups of credentials, original documents or models. Use `--runtime` to specify the Podman executable if it is not on PATH. PostgreSQL uploads to S3 are not implemented. See the [operations guide](infra/postgres/README.md) for persistence, credentials and restoration details.
@@ -318,7 +318,76 @@ Check real Ollama ingestion, retrieval and generation using a temporary SQLite c
 **Windows / Linux**
 
 ```bash
-./.venv/bin/python -m scripts.verify_local
+./.venv/bin/python -m cli.verify_local
 ```
 
 References: [Ollama embeddings](https://docs.ollama.com/api/embed), [Ollama chat](https://docs.ollama.com/api/chat), [Boto3 uploads](https://docs.aws.amazon.com/boto3/latest/guide/s3-uploading-files.html).
+
+## Start and stop scripts
+
+The scripts automatically locate Podman, set the Compose provider and run from the project root.
+Environment changes apply only to the launched process; no manual exports or permanent PATH changes are needed.
+They require an existing .env, configured PostgreSQL credentials, a running Podman engine,
+and Compose tooling installed with requirements-containers.txt. They never install software or regenerate credentials.
+
+<details>
+<summary><strong>Windows (Git Bash) / Linux (Bash)</strong></summary>
+
+```bash
+bash scripts/start.sh
+bash scripts/stop.sh
+```
+
+</details>
+
+<details>
+<summary><strong>Windows (PowerShell)</strong></summary>
+
+```powershell
+.\scripts\start.ps1
+.\scripts\stop.ps1
+```
+
+If your PowerShell execution policy blocks scripts, use the Python launcher instead of changing system policy:
+
+```powershell
+.\.venv\Scripts\python.exe -m cli.compose start
+.\.venv\Scripts\python.exe -m cli.compose stop
+```
+
+</details>
+
+Start runs `podman compose up -d --build`. Stop runs `podman compose stop`,
+preserving containers, networks and named volumes. Neither script stops Ollama or the Podman machine.
+To verify tooling without starting or stopping containers, append `--check` to either script.
+The default web address is http://127.0.0.1:8080; an APP_PORT override takes precedence.
+
+
+### Shell wrappers and Python commands
+
+`scripts/` contains only shell entry points. The shared Python launcher and other
+command-line utilities live in the `cli/` package. Older commands using
+`python -m scripts.<command>` must now use `python -m cli.<command>`.
+
+| Task | Python module |
+| --- | --- |
+| Start or stop Compose | `cli.compose start` / `cli.compose stop` |
+| Generate local PostgreSQL configuration | `cli.configure_postgres` |
+| Check PostgreSQL connectivity | `cli.check_postgres` |
+| Import local documents | `cli.import_docs` |
+| Migrate SQLite documents to PostgreSQL | `cli.migrate_postgres` |
+| Back up or restore PostgreSQL data | `cli.postgres_backup backup` / `cli.postgres_backup restore` |
+| Verify local Ollama ingestion and answers | `cli.verify_local` |
+
+Run modules from the repository root with the virtual environment interpreter:
+`./.venv/bin/python -m <module>` on Linux, or
+`.\\.venv\\Scripts\\python.exe -m <module>` in Windows PowerShell.
+The shell wrappers locate the repository automatically and can also be called by absolute path.
+
+## Repository layout
+
+- `app/`: API, retrieval, storage and web interface.
+- `cli/`: Python command-line utilities, invoked with `python -m cli.<command>`.
+- `scripts/`: Bash and PowerShell start/stop wrappers only.
+- `infra/`: PostgreSQL initialization and operations documentation.
+- `tests/`: automated tests.

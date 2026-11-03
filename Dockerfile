@@ -8,7 +8,7 @@ RUN python -m pip install --no-cache-dir -r requirements.txt \
     && mkdir -p /app/data /app/docs \
     && chown -R 10001:10001 /app/data
 COPY app ./app
-COPY scripts ./scripts
+COPY cli ./cli
 USER 10001:10001
 EXPOSE 8000
 CMD ["python","-m","uvicorn","app.main:create_app","--factory","--host","0.0.0.0","--port","8000"]
