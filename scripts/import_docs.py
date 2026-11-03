@@ -1,3 +1,4 @@
+from app.storage import create_store
 """Recursively import PDF, Markdown and TXT documents."""
 import argparse
 import os
@@ -50,7 +51,7 @@ def main():
         root = Path(args.path).resolve(strict=True)
         if not root.is_dir():
             raise ValueError('Path must be a directory')
-        store = None if args.dry_run else Store(Settings.load())
+        store = None if args.dry_run else create_store(Settings.load())
         counts = import_directory(root, store, args.dry_run)
     except (OSError, ValueError) as exc:
         parser.exit(1, f'Import failed: {exc}\n')

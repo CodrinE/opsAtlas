@@ -1,0 +1,68 @@
+name: opsatlas
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: localhost/opsatlas:local
+    container_name: opsatlas-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_BACKEND: postgres
+      DATABASE_URL: postgresql://opsatlas:${OPSATLAS_DB_PASSWORD:?Run scripts.configure_postgres first}@postgres:5432/opsatlas
+      OLLAMA_URL: ${CONTAINER_OLLAMA_URL:-http://host.containers.internal:11434}
+      CHAT_MODEL: ${CHAT_MODEL:-qwen3:14b}
+      EMBED_MODEL: ${EMBED_MODEL:-embeddinggemma:300m}
+      DATA_DIR: /app/data
+      MIN_SCORE: ${MIN_SCORE:-0.35}
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-100}
+      MAX_PDF_PAGES: ${MAX_PDF_PAGES:-5000}
+      MAX_DOCUMENT_CHUNKS: ${MAX_DOCUMENT_CHUNKS:-30000}
+      S3_ENABLED: "false"
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8000"
+    volumes:
+      - opsatlas_appdata:/app/data
+      - ./docs:/app/docs:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=5)"]
+      interval: 10s
+      timeout: 6s
+      retries: 6
+      start_period: 15s
+  postgres:
+    image: docker.io/pgvector/pgvector:0.8.1-pg17
+    container_name: opsatlas-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: opsatlas
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Run scripts.configure_postgres first}
+      OPSATLAS_DB_PASSWORD: ${OPSATLAS_DB_PASSWORD:?Run scripts.configure_postgres first}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - opsatlas_pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init.sh:/docker-entrypoint-initdb.d/10-opsatlas.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d opsatlas"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    shm_size: 256mb
+volumes:
+  opsatlas_pgdata:
+    name: opsatlas_pgdata
+  opsatlas_appdata:
+    name: opsatlas_appdata

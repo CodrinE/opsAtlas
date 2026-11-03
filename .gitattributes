@@ -4,3 +4,6 @@
 *.css text eol=lf
 *.html text eol=lf
 *.md text eol=lf
+
+*.sh text eol=lf
+*.yaml text eol=lf

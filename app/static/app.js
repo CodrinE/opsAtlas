@@ -23,6 +23,8 @@ async function status() {
   try {
     const data = await api('/api/status', {signal: AbortSignal.timeout(10000)});
     token = data.token;
+    $('#storage-kind').textContent = data.storage === 'SQLite local' ? t('Stocare local' + String.fromCharCode(259) + ' ' + String.fromCharCode(183) + ' SQLite') : data.storage;
+
     maxUploadMb = data.max_upload_mb;
     $('#upload-limit').textContent = `PDF, Markdown, TXT · max. ${maxUploadMb} MiB / ${language === 'en' ? 'file' : 'fișier'}`;
     $('#connection').textContent = t({ready: '● OLLAMA CONECTAT', models_missing: '◌ MODELE LIPSĂ', offline: '◌ OLLAMA OPRIT'}[data.ollama]);

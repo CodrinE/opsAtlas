@@ -112,6 +112,8 @@ def main():
     parser.add_argument('--key', help='Cheia S3 completă pentru restore')
     args = parser.parse_args()
     settings = Settings.load()
+    if settings.database_backend != "sqlite":
+        parser.error("S3 snapshots support SQLite only. Use scripts.postgres_backup for PostgreSQL.")
     try:
         client, bucket, prefix = s3_config()
         if args.action == 'upload':

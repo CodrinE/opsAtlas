@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -17,7 +17,15 @@ class Settings:
     max_pdf_pages: int = 5000
     max_document_chunks: int = 30000
 
+    database_backend: str = 'sqlite'
+    database_url: str = field(default='', repr=False)
+
     def __post_init__(self):
+        if self.database_backend not in {'sqlite', 'postgres'}:
+            raise ValueError('DATABASE_BACKEND must be sqlite or postgres')
+        if self.database_backend == 'postgres' and not self.database_url:
+            raise ValueError('DATABASE_URL is required for postgres')
+
         for name in ('max_upload_mb', 'max_pdf_pages', 'max_document_chunks'):
             if getattr(self, name) < 1:
                 raise ValueError(f'{name} must be positive')
@@ -27,8 +35,8 @@ class Settings:
         load_dotenv()
         url = os.getenv('OLLAMA_URL', 'http://127.0.0.1:11434').rstrip('/')
         parsed = urlparse(url)
-        if parsed.scheme != 'http' or parsed.hostname not in {'127.0.0.1', 'localhost', '::1'} or parsed.username or parsed.password or parsed.path or parsed.query or parsed.fragment:
-            raise ValueError('OLLAMA_URL must be a local HTTP origin, e.g. http://127.0.0.1:11434')
+        if parsed.scheme != 'http' or parsed.hostname not in {'127.0.0.1', 'localhost', '::1', 'host.containers.internal', 'host.docker.internal'} or parsed.username or parsed.password or parsed.path or parsed.query or parsed.fragment:
+            raise ValueError('OLLAMA_URL must be a local HTTP origin or a container host gateway')
         score = float(os.getenv('MIN_SCORE', '0.35'))
         if not -1 <= score <= 1:
             raise ValueError('MIN_SCORE must be between -1 and 1')
@@ -37,4 +45,5 @@ class Settings:
                    os.getenv('EMBED_MODEL', 'embeddinggemma:300m'), score,
                    int(os.getenv('MAX_UPLOAD_MB', '100')),
                    int(os.getenv('MAX_PDF_PAGES', '5000')),
-                   int(os.getenv('MAX_DOCUMENT_CHUNKS', '30000')))
+                   int(os.getenv('MAX_DOCUMENT_CHUNKS', '30000')),
+                   os.getenv('DATABASE_BACKEND', 'sqlite'), os.getenv('DATABASE_URL', ''))

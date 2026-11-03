@@ -1,3 +1,4 @@
+from app.storage import create_store
 import logging
 import secrets
 from contextlib import asynccontextmanager
@@ -16,7 +17,7 @@ from app.jobs import ImportJobs
 
 def create_app(settings=None, store=None):
     settings = settings or Settings.load()
-    store = store or Store(settings)
+    store = store or create_store(settings)
     jobs = ImportJobs(store)
 
     @asynccontextmanager
@@ -48,6 +49,15 @@ def create_app(settings=None, store=None):
         logging.getLogger(__name__).exception('Request failed')
         return JSONResponse({'detail': 'Eroare internă. Verifică terminalul aplicației.'}, status_code=500)
 
+    @app.get('/health')
+    def health():
+        try:
+            with store.connection() as db:
+                db.execute('SELECT 1').fetchone()
+            return {'status': 'ok'}
+        except Exception:
+            return JSONResponse({'status': 'unavailable'}, status_code=503)
+
     @app.get('/api/status')
     def status():
         try:
@@ -60,7 +70,7 @@ def create_app(settings=None, store=None):
         return {'ollama': ollama, 'chat_model': settings.chat_model, 'embed_model': settings.embed_model,
                 'max_upload_mb': settings.max_upload_mb, 'max_pdf_pages': settings.max_pdf_pages,
                 'max_document_chunks': settings.max_document_chunks,
-                'token': token, 'storage': 'SQLite local', 'aws': 'Backup opțional prin CLI'}
+                'token': token, 'storage': 'PostgreSQL + pgvector' if settings.database_backend == 'postgres' else 'SQLite local', 'aws': 'Backup opțional prin CLI'}
 
     @app.get('/api/documents')
     def documents():
