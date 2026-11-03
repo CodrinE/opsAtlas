@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ro">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OpsAtlas / Local RAG</title><link rel="stylesheet" href="/static/style.css"><script src="/static/i18n.js" defer></script><script src="/static/app.js" defer></script></head>
+<body>
+<aside>
+  <a class="brand" href="/">oa<span>OPSATLAS<br>LOCAL KNOWLEDGE</span></a>
+  <div class="section-label">01 / BAZA DE CUNOȘTINȚE</div>
+  <h2>Documentele tale.<br>Contextul tău.</h2>
+  <p class="muted">Încarcă documentația tehnică. Răspunsurile pornesc de la sursă.</p>
+  <label class="upload" for="files"><span class="plus">＋</span><strong>Adaugă documente</strong><small id="upload-limit">PDF, Markdown, TXT</small></label>
+  <input id="files" type="file" accept=".pdf,.md,.txt" multiple>
+  <p id="upload-status" class="muted" role="status"></p>
+  <div id="imports" aria-live="polite"></div>
+  <div class="list-heading"><span>BIBLIOTECĂ</span><span id="count">0</span></div>
+  <div id="documents"></div>
+  <footer><span class="dot"></span> Stocare locală · SQLite<p>AWS S3: backup opțional din terminal.</p></footer>
+</aside>
+<main>
+  <header>
+    <div class="workspace-status"><span>WORKSPACE / LOCAL</span><span id="connection" role="status">Verificare Ollama…</span></div>
+    <fieldset id="language" class="language-picker" aria-label="Language / Limbă">
+      <button type="button" data-language="ro" aria-label="Română" aria-pressed="true">RO</button>
+      <button type="button" data-language="en" aria-label="English" aria-pressed="false">EN</button>
+    </fieldset>
+  </header>
+  <section class="intro"><div class="section-label">02 / ASISTENT TEHNIC</div><h1>Mai puțin căutat.<br><em>Mai mult context.</em></h1><p>Întreabă documentația despre infrastructură, livrare și securitate.<br>Verifică răspunsurile direct în fragmentele citate.</p><div class="model-info" id="models"></div></section>
+  <div id="setup" class="notice" hidden>Pornește Ollama și descarcă modelele configurate în <code>.env</code>. Apoi apasă <button id="refresh" type="button">Verifică din nou</button>.</div>
+  <section id="conversation" aria-live="polite"><div class="empty" id="empty"><span>ÎNCEPE CU O ÎNTREBARE</span><div class="suggestions"><button type="button">Care sunt pașii de deployment descriși în documente?</button><button type="button">Ce recomandări de securitate apar în documentație?</button></div></div></section>
+  <form id="ask"><label for="question">Întrebarea ta</label><div class="composer"><textarea id="question" maxlength="4000" rows="2" placeholder="Ex.: Cum configurez un NetworkPolicy conform documentației?" required></textarea><button id="send" type="submit">Întreabă ↗</button></div><small>Procesare locală. Răspunsurile AI pot conține erori; verifică sursele. Fiecare întrebare este independentă.</small></form>
+</main>
+</body></html>

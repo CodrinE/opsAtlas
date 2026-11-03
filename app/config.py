@@ -1,0 +1,40 @@
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from urllib.parse import urlparse
+
+from dotenv import load_dotenv
+
+
+@dataclass(frozen=True)
+class Settings:
+    data_dir: Path
+    ollama_url: str
+    chat_model: str
+    embed_model: str
+    min_score: float
+    max_upload_mb: int = 100
+    max_pdf_pages: int = 5000
+    max_document_chunks: int = 30000
+
+    def __post_init__(self):
+        for name in ('max_upload_mb', 'max_pdf_pages', 'max_document_chunks'):
+            if getattr(self, name) < 1:
+                raise ValueError(f'{name} must be positive')
+
+    @classmethod
+    def load(cls):
+        load_dotenv()
+        url = os.getenv('OLLAMA_URL', 'http://127.0.0.1:11434').rstrip('/')
+        parsed = urlparse(url)
+        if parsed.scheme != 'http' or parsed.hostname not in {'127.0.0.1', 'localhost', '::1'} or parsed.username or parsed.password or parsed.path or parsed.query or parsed.fragment:
+            raise ValueError('OLLAMA_URL must be a local HTTP origin, e.g. http://127.0.0.1:11434')
+        score = float(os.getenv('MIN_SCORE', '0.35'))
+        if not -1 <= score <= 1:
+            raise ValueError('MIN_SCORE must be between -1 and 1')
+        return cls(Path(os.getenv('DATA_DIR', './data')).resolve(), url,
+                   os.getenv('CHAT_MODEL', 'qwen3:14b'),
+                   os.getenv('EMBED_MODEL', 'embeddinggemma:300m'), score,
+                   int(os.getenv('MAX_UPLOAD_MB', '100')),
+                   int(os.getenv('MAX_PDF_PAGES', '5000')),
+                   int(os.getenv('MAX_DOCUMENT_CHUNKS', '30000')))

@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.env
+data/
+backups/
+*.egg-info/
+# Local knowledge documents may contain internal or confidential information.
+docs/**
+!docs/.gitkeep
