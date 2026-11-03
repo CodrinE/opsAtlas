@@ -391,3 +391,53 @@ The shell wrappers locate the repository automatically and can also be called by
 - `scripts/`: Bash and PowerShell start/stop wrappers only.
 - `infra/`: PostgreSQL initialization and operations documentation.
 - `tests/`: automated tests.
+
+## Test coverage and service-dependent checks
+
+pytest-cov measures all Python modules under app/ and cli/, including branch coverage.
+Every normal pytest run writes a terminal report, htmlcov/index.html, and coverage.xml.
+Generated coverage files are ignored by Git. No coverage threshold is enforced yet.
+
+**Windows PowerShell**
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+**Linux Bash**
+
+```bash
+./.venv/bin/python -m pip install -r requirements-dev.txt
+./.venv/bin/python -m pytest -q
+```
+
+Open htmlcov/index.html in a browser to inspect unexecuted lines and branches.
+Use --no-cov for a test run without coverage instrumentation.
+
+For the complete currently implemented Python suite, start the initialized PostgreSQL container
+and Ollama with the configured chat and embedding models, then enable both opt-in checks:
+
+**Windows PowerShell**
+
+```powershell
+$env:RUN_POSTGRES_TESTS='1'
+$env:RUN_OLLAMA_TESTS='1'
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+**Linux Bash**
+
+```bash
+RUN_POSTGRES_TESTS=1 RUN_OLLAMA_TESTS=1 ./.venv/bin/python -m pytest -q
+```
+
+The PostgreSQL integration test adds/deletes a uniquely identified test document;
+the Ollama test uses a temporary SQLite corpus. Do not use a shared production database.
+These opt-in checks fail if enabled services are unavailable; ordinary runs skip them.
+Real-model checks take longer and can fail if model answers do not meet the citation/content assertions.
+
+Coverage is not proof that everything works. Python coverage does not measure JavaScript,
+browser interactions, shell scripts, container lifecycle, live AWS operations or factual RAG quality.
+S3 tests use a simulated adapter. A restore drill against a separate disposable PostgreSQL database,
+browser end-to-end checks and a representative RAG evaluation dataset remain separate validation work.

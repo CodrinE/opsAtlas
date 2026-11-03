@@ -8,3 +8,10 @@ backups/
 # Local knowledge documents may contain internal or confidential information.
 docs/**
 !docs/.gitkeep
+
+# Generated coverage reports
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+coverage.json
