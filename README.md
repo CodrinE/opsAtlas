@@ -6,9 +6,14 @@ The application supports SQLite and PostgreSQL with pgvector. The default instal
 
 ## Run with Podman Compose
 
-Requirements: a running Podman machine, Python 3.12+ for local setup tools, and [Ollama](https://ollama.com/download) running on Windows.
+Requirements: Python 3.12+, [Ollama](https://ollama.com/download) running on the host, and a working Podman engine with a Compose provider. Windows uses a running Podman machine; Linux can run Podman natively.
+
+Expand the Windows or Linux command section for your platform. GitHub README files do not support interactive tabs, so these sections use collapsible panels.
 
 For a new checkout, create the virtual environment and configuration first:
+
+<details>
+<summary><strong>Windows (PowerShell)</strong></summary>
 
 ```powershell
 python -m venv .venv
@@ -19,9 +24,28 @@ ollama pull embeddinggemma:300m
 .\.venv\Scripts\python.exe -m scripts.configure_postgres
 ```
 
+</details>
+
+<details>
+<summary><strong>Linux (Bash)</strong></summary>
+
+```bash
+python3 -m venv .venv
+./.venv/bin/python -m pip install -r requirements-dev.txt -r requirements-containers.txt
+cp -n .env.example .env
+ollama pull qwen3:14b
+ollama pull embeddinggemma:300m
+./.venv/bin/python -m scripts.configure_postgres
+```
+
+</details>
+
 Do not overwrite an existing `.env`: it contains the database credentials and your model settings. You can use an installed chat model by setting `CHAT_MODEL` to its exact name from `ollama list`. The local checkout was tested with `qwen2.5:7b`.
 
 Build the application locally and start both containers:
+
+<details>
+<summary><strong>Windows (PowerShell)</strong></summary>
 
 ```powershell
 $env:PATH = "$env:LOCALAPPDATA/Programs/Podman;" + $env:PATH
@@ -29,13 +53,29 @@ $env:PODMAN_COMPOSE_PROVIDER = (Resolve-Path .venv/Scripts/podman-compose.exe).P
 podman compose up -d --build
 ```
 
-Open **http://127.0.0.1:8080**. Use `--build` after source changes; starting without it may reuse the previous image. Ollama stays on Windows and uses the host GPU. The application connects through `host.containers.internal`.
+</details>
+
+<details>
+<summary><strong>Linux (Bash)</strong></summary>
+
+```bash
+export PODMAN_COMPOSE_PROVIDER="$PWD/.venv/bin/podman-compose"
+podman compose up -d --build
+```
+
+</details>
+
+Open **http://127.0.0.1:8080**. Use `--build` after source changes; starting without it may reuse the previous image. Ollama stays on the host and uses its configured compute device. The application connects through `host.containers.internal`.
+
+On Linux, ensure the host Ollama service is reachable through `host.containers.internal`; host loopback reachability depends on the Podman network configuration. Keep any changed Ollama listener restricted by the host firewall. On SELinux-enforcing hosts, bind mounts may need an appropriate label such as `:ro,Z` for project-owned directories; review labeling before changing shared system directories. Linux commands are documented here but were not executed in this Windows workspace.
 
 The application runs as an unprivileged user with a read-only root filesystem and dropped Linux capabilities. Credentials, documents, databases, backups and Git history are excluded from the image build context.
 
 Useful commands:
 
-```powershell
+**Windows / Linux**
+
+```bash
 podman compose logs -f app
 podman compose stop
 podman compose up -d
@@ -45,9 +85,12 @@ The named volumes `opsatlas_pgdata` and `opsatlas_appdata` preserve database dat
 
 See [PostgreSQL and Podman operations](infra/postgres/README.md) for connection settings, migration, backups, restoration and troubleshooting. Docker Desktop is not required.
 
-## Run directly on Windows
+## Run directly on Windows or Linux
 
 For a new installation without containers:
+
+<details>
+<summary><strong>Windows (PowerShell)</strong></summary>
 
 ```powershell
 python -m venv .venv
@@ -58,9 +101,27 @@ ollama pull embeddinggemma:300m
 .\.venv\Scripts\python.exe -m uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000
 ```
 
+</details>
+
+<details>
+<summary><strong>Linux (Bash)</strong></summary>
+
+```bash
+python3 -m venv .venv
+./.venv/bin/python -m pip install -r requirements.txt
+cp -n .env.example .env
+ollama pull qwen3:14b
+ollama pull embeddinggemma:300m
+./.venv/bin/python -m uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000
+```
+
+</details>
+
 Open **http://127.0.0.1:8000**. Ollama must be running through its desktop application or `ollama serve`. Preserve any existing `.env` instead of copying over it. An existing PostgreSQL configuration also works when running the application directly.
 
-In Git Bash, use `./.venv/Scripts/python.exe`. Activating the virtual environment is optional. If Windows reports `No such file or directory` when writing under Documents, check Windows Security Protection history for Controlled folder access blocks, or use a development directory outside Documents.
+On Linux, install the Python venv package provided by your distribution if virtual environment creation fails. The commands use the virtual environment interpreter directly, so activation is optional.
+
+In Git Bash on Windows, use `./.venv/Scripts/python.exe`. Activating the virtual environment is optional. If Windows reports `No such file or directory` when writing under Documents, check Windows Security Protection history for Controlled folder access blocks, or use a development directory outside Documents.
 
 Downloading packages and models requires internet access. Once installed, application inference is local and the interface uses no external fonts or CDNs. Ollama may perform its own update checks; enforce system-level egress rules if a completely isolated workstation is required.
 
@@ -91,25 +152,31 @@ The interface supports Romanian and English, with the selected language saved in
 
 Place PDF, Markdown or TXT files under `docs/`, including subdirectories. Preview the file list without indexing or contacting Ollama:
 
-```powershell
-.\.venv\Scripts\python.exe -m scripts.import_docs --dry-run
+**Windows / Linux**
+
+```bash
+./.venv/bin/python -m scripts.import_docs --dry-run
 ```
 
 Start Ollama and stop the directly running web server before a CLI import:
 
-```powershell
-.\.venv\Scripts\python.exe -m scripts.import_docs
+**Windows / Linux**
+
+```bash
+./.venv/bin/python -m scripts.import_docs
 ```
 
 For the container deployment, with no concurrent web uploads:
 
-```powershell
+**Windows / Linux**
+
+```bash
 podman compose exec app python -m scripts.import_docs
 ```
 
 The container mounts `docs/` read-only, so adding source documents does not require rebuilding the image.
 
-Use `--path "C:/path/to/documents"` to select another directory when running locally. The same configured limits apply. The command reports progress, continues after individual file errors, and exits with code 1 if any file fails. Hidden files and directories, symbolic links and junctions within the directory tree are skipped.
+Use `--path "C:/path/to/documents"` on Windows or `--path "/path/to/documents"` on Linux to select another directory when running locally. The same configured limits apply. The command reports progress, continues after individual file errors, and exits with code 1 if any file fails. Hidden files and directories, symbolic links and junctions within the directory tree are skipped.
 
 Duplicate content is skipped by SHA-256. Changed files become new documents; previous versions are not automatically removed. Delete obsolete versions explicitly in the interface. Source labels use filenames, so use distinctive names for different documents in separate subdirectories. There is no automatic directory watcher or synchronization.
 
@@ -119,28 +186,36 @@ Original files remain under `docs/` and are excluded from Git. Refresh the inter
 
 Generate credentials once with `scripts.configure_postgres`, start PostgreSQL, and check connectivity:
 
-```powershell
-.\.venv\Scripts\python.exe -m scripts.check_postgres
+**Windows / Linux**
+
+```bash
+./.venv/bin/python -m scripts.check_postgres
 ```
 
 Copy existing SQLite documents and embeddings without deleting the source:
 
-```powershell
-.\.venv\Scripts\python.exe -m scripts.migrate_postgres
+**Windows / Linux**
+
+```bash
+./.venv/bin/python -m scripts.migrate_postgres
 ```
 
 Run migration without concurrent imports. It commits per document and skips duplicates, so an interrupted migration can be rerun. Keep SQLite until you verify document counts and answers.
 
 Create a local PostgreSQL backup:
 
-```powershell
-.\.venv\Scripts\python.exe -m scripts.postgres_backup backup
+**Windows / Linux**
+
+```bash
+./.venv/bin/python -m scripts.postgres_backup backup
 ```
 
 Restore a trusted backup into an empty initialized PostgreSQL database, with the application stopped:
 
-```powershell
-.\.venv\Scripts\python.exe -m scripts.postgres_backup restore --file backups/NAME.dump
+**Windows / Linux**
+
+```bash
+./.venv/bin/python -m scripts.postgres_backup restore --file backups/NAME.dump
 ```
 
 These are data-only archives for the supplied schema, not backups of credentials, original documents or models. Use `--runtime` to specify the Podman executable if it is not on PATH. PostgreSQL uploads to S3 are not implemented. See the [operations guide](infra/postgres/README.md) for persistence, credentials and restoration details.
@@ -164,14 +239,18 @@ AWS_DEFAULT_REGION=eu-central-1
 
 Upload a consistent SQLite snapshot with SHA-256 metadata:
 
-```powershell
-.\.venv\Scripts\python.exe -m app.backup upload
+**Windows / Linux**
+
+```bash
+./.venv/bin/python -m app.backup upload
 ```
 
 The command prints the object key. To restore, stop the server, set `DATA_DIR=./data-restored` to a new location, and run:
 
-```powershell
-.\.venv\Scripts\python.exe -m app.backup restore --key devops-rag/backups/PRINTED-KEY.sqlite3
+**Windows / Linux**
+
+```bash
+./.venv/bin/python -m app.backup restore --key devops-rag/backups/PRINTED-KEY.sqlite3
 ```
 
 Restoration refuses to overwrite an existing database and checks SHA-256, SQLite integrity and the basic schema. The backup limit is 512 MiB. The checksum detects corruption but does not authenticate an object changed by someone with bucket write access. Restore only trusted backups. Restart with the restored `DATA_DIR` and the original embedding model. Archive original PDFs and Ollama models separately if complete recovery is required.
@@ -203,24 +282,43 @@ An enterprise deployment requires OIDC, document-level authorization before retr
 
 Run automated tests without GPU or AWS access:
 
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\.venv\Scripts\python.exe -m pytest -q
+**Windows / Linux**
+
+```bash
+./.venv/bin/python -m pip install -r requirements-dev.txt
+./.venv/bin/python -m pytest -q
 ```
 
 Run the optional PostgreSQL integration test against the initialized local database:
+
+<details>
+<summary><strong>Windows (PowerShell)</strong></summary>
 
 ```powershell
 $env:RUN_POSTGRES_TESTS='1'
 .\.venv\Scripts\python.exe -m pytest tests/test_postgres.py -q
 ```
 
+</details>
+
+<details>
+<summary><strong>Linux (Bash)</strong></summary>
+
+```bash
+export RUN_POSTGRES_TESTS=1
+./.venv/bin/python -m pytest tests/test_postgres.py -q
+```
+
+</details>
+
 This inserts and deletes a uniquely identified test document. Do not point it at a shared production database.
 
 Check real Ollama ingestion, retrieval and generation using a temporary SQLite corpus:
 
-```powershell
-.\.venv\Scripts\python.exe -m scripts.verify_local
+**Windows / Linux**
+
+```bash
+./.venv/bin/python -m scripts.verify_local
 ```
 
 References: [Ollama embeddings](https://docs.ollama.com/api/embed), [Ollama chat](https://docs.ollama.com/api/chat), [Boto3 uploads](https://docs.aws.amazon.com/boto3/latest/guide/s3-uploading-files.html).
